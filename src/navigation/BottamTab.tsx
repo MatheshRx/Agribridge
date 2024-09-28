@@ -2,15 +2,16 @@ import {StyleSheet, Text, View} from 'react-native';
 import React, {FC} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screen/HomeScreen';
-import DrawPolyline from '../screen/Dummy';
+import MapScreen from '../screen/map/MapScreen';
+import {Routes} from '../../App';
 
 const Tab = createBottomTabNavigator();
 
 const BottamTab: FC = () => {
   return (
     <Tab.Navigator>
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Map" component={DrawPolyline} />
+      <Tab.Screen name={Routes.List} component={HomeScreen} />
+      <Tab.Screen name={Routes.Map} component={MapScreen} />
     </Tab.Navigator>
   );
 };

@@ -36,6 +36,7 @@ export enum Routes {
   BottomTap = 'bottomTap',
   Home = 'home',
   Map = 'map',
+  List = 'list',
 }
 
 Mapbox.setAccessToken(MAPBOX_ACCESSTOKEN);

@@ -6,7 +6,10 @@ import React, {
   ComponentProps,
   useMemo,
   forwardRef,
+  FC,
 } from 'react';
+import {ScreenParams} from '../../types/screenPropTypes';
+import {storeData} from '../../utils/Asyncstorage';
 
 type Position = [number, number];
 
@@ -55,9 +58,6 @@ const CrosshairOverlay = ({
 }) => {
   const ref = useRef<View>(null);
 
-  if (ref.current != null) {
-    console.log('=> ref.current', ref.current != null);
-  }
   return (
     <View
       style={{
@@ -77,6 +77,7 @@ const CrosshairOverlay = ({
         ref={ref}
         onLayout={e => {
           const {x, y, width, height} = e.nativeEvent.layout;
+          console.log({x, y, width, height});
           onCenter([x + width / 2.0, y + height / 2.0]);
         }}
       />
@@ -90,7 +91,7 @@ const lineLayerStyle = {
 
 const Polygon = ({coordinates}: {coordinates: Position[]}) => {
   const features: GeoJSON.FeatureCollection = useMemo(() => {
-    return {
+    const geoJson: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',
       features: [
         {
@@ -104,8 +105,10 @@ const Polygon = ({coordinates}: {coordinates: Position[]}) => {
         } as const,
       ],
     };
+
+    return geoJson;
   }, [coordinates]);
-  console.log('=> features', JSON.stringify(features));
+
   return (
     <ShapeSource id={'shape-source-id-0'} shape={features}>
       <LineLayer id={'line-layer'} style={lineLayerStyle} />
@@ -113,7 +116,7 @@ const Polygon = ({coordinates}: {coordinates: Position[]}) => {
   );
 };
 
-const DrawPolyline = () => {
+const MapScreen: FC<ScreenParams> = props => {
   const [coordinates, setCoordinates] = useState<Position[]>([]);
   const [lastCoordinate, setLastCoordinate] = useState<Position>([0, 0]);
   const [started, setStarted] = useState(false);
@@ -126,8 +129,15 @@ const DrawPolyline = () => {
   const map = useRef<MapView>(null);
 
   const newLocal = 'row';
+
+  const saveCoordsInLocal = (coordinates: Position) => {
+    storeData(coordinates);
+    setStarted(false);
+  };
+
   return (
     <View style={{flex: 1}}>
+      {/* // @ Buttons */}
       <View>
         {!started ? (
           <Button
@@ -148,10 +158,16 @@ const DrawPolyline = () => {
               title="add"
               onPress={() => setCoordinates([...coordinates, lastCoordinate])}
             />
-            <Button title="stop" onPress={() => setStarted(false)} />
+            <Button title="cancel" onPress={() => setStarted(false)} />
+            <Button
+              title="stop and save"
+              onPress={() => saveCoordsInLocal(coordinates[0])}
+            />
           </View>
         )}
       </View>
+
+      {/* // @ Map View */}
       <View style={{flex: 1}}>
         <MapView
           ref={map}
@@ -185,4 +201,4 @@ const DrawPolyline = () => {
   );
 };
 
-export default DrawPolyline;
+export default MapScreen;
