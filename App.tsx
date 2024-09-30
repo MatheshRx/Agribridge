@@ -5,25 +5,8 @@
  * @format
  */
 
-import React, {useEffect} from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import React from 'react';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import SplashScreen from './src/screen/SplashScreen';
@@ -35,12 +18,11 @@ export enum Routes {
   Splash = 'splash',
   BottomTap = 'bottomTap',
   Home = 'home',
-  Map = 'map',
-  List = 'list',
+  Map = 'Map',
+  List = 'List',
 }
 
 Mapbox.setAccessToken(MAPBOX_ACCESSTOKEN);
-// Mapbox.setConnected(true);
 
 function App(): React.JSX.Element {
   const Stack = createNativeStackNavigator();

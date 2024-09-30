@@ -17,3 +17,10 @@ export const STYLES = {
     paddingTop: StatusBar.currentHeight ?? 0,
   }
 }
+
+export const FONTS = {
+  bold: 'JosefinSans-Bold',
+  medium: 'JosefinSans-Medium',
+  regular: 'JosefinSans-Regular',
+  thin: 'JosefinSans-Thin',
+}

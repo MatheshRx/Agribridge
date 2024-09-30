@@ -1,124 +1,28 @@
 import {Camera, LineLayer, MapView, ShapeSource} from '@rnmapbox/maps';
-import {Button, View} from 'react-native';
-import React, {
-  useState,
-  useRef,
-  ComponentProps,
-  useMemo,
-  forwardRef,
-  FC,
-} from 'react';
+import {
+  Button,
+  StyleSheet,
+  Text,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import React, {useState, useRef, useMemo, FC} from 'react';
 import {ScreenParams} from '../../types/screenPropTypes';
 import {storeData} from '../../utils/Asyncstorage';
+import {FeatureCollection} from 'geojson';
+import MIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {COLORS, FONTS} from '../../styles/theme';
+import Polygon from './shapes/Polygon';
+import CrosshairOverlay from './shapes/CrosshairOverlay';
 
 type Position = [number, number];
 
-type CrosshairProps = {
-  size: number;
-  w: number;
-  onLayout: ComponentProps<typeof View>['onLayout'];
-};
-const Crosshair = forwardRef<View, CrosshairProps>(
-  ({size, w, onLayout}: CrosshairProps, ref) => (
-    <View
-      onLayout={onLayout}
-      ref={ref}
-      style={{
-        width: 2 * size + 1,
-        height: 2 * size + 1,
-      }}>
-      <View
-        style={{
-          position: 'absolute',
-          left: size,
-          top: 0,
-          bottom: 0,
-          borderColor: 'red',
-          borderWidth: w / 2.0,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          top: size,
-          left: 0,
-          right: 0,
-          borderColor: 'red',
-          borderWidth: w / 2.0,
-        }}
-      />
-    </View>
-  ),
-);
-
-const CrosshairOverlay = ({
-  onCenter,
-}: {
-  onCenter: (x: [number, number]) => void;
-}) => {
-  const ref = useRef<View>(null);
-
-  return (
-    <View
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        alignContent: 'center',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-      pointerEvents="none">
-      <Crosshair
-        size={20}
-        w={1.0}
-        ref={ref}
-        onLayout={e => {
-          const {x, y, width, height} = e.nativeEvent.layout;
-          console.log({x, y, width, height});
-          onCenter([x + width / 2.0, y + height / 2.0]);
-        }}
-      />
-    </View>
-  );
-};
-
-const lineLayerStyle = {
-  lineColor: '#ff0000',
-};
-
-const Polygon = ({coordinates}: {coordinates: Position[]}) => {
-  const features: GeoJSON.FeatureCollection = useMemo(() => {
-    const geoJson: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'a-feature',
-          geometry: {
-            type: 'LineString',
-            coordinates,
-          },
-          properties: {},
-        } as const,
-      ],
-    };
-
-    return geoJson;
-  }, [coordinates]);
-
-  return (
-    <ShapeSource id={'shape-source-id-0'} shape={features}>
-      <LineLayer id={'line-layer'} style={lineLayerStyle} />
-    </ShapeSource>
-  );
-};
-
 const MapScreen: FC<ScreenParams> = props => {
-  const [coordinates, setCoordinates] = useState<Position[]>([]);
-  const [lastCoordinate, setLastCoordinate] = useState<Position>([0, 0]);
+  const [coordinates, setCoordinates] = useState<Position[]>([]); // ~ all coordinates
+  const [lastCoordinate, setLastCoordinate] = useState<Position>([0, 0]); // ~ only last coordinates
+  const [featureCollection, setFeatureCollection] =
+    useState<FeatureCollection>(); // ~ polygon's starting point feature object
   const [started, setStarted] = useState(false);
   const [crosshairPos, setCrosshairPos] = useState([0, 0]);
 
@@ -130,43 +34,22 @@ const MapScreen: FC<ScreenParams> = props => {
 
   const newLocal = 'row';
 
-  const saveCoordsInLocal = (coordinates: Position) => {
-    storeData(coordinates);
+  // @ Saving data in local storage
+  const saveCoordsInLocal = () => {
+    console.log({featureCollection});
+
+    storeData(featureCollection as FeatureCollection);
     setStarted(false);
+    ToastAndroid.show('Saved successfully', ToastAndroid.SHORT);
+  };
+
+  const cancelDrawing = () => {
+    setStarted(false);
+    setFeatureCollection(undefined);
   };
 
   return (
     <View style={{flex: 1}}>
-      {/* // @ Buttons */}
-      <View>
-        {!started ? (
-          <Button
-            title="start"
-            onPress={() => {
-              setStarted(true);
-              setCoordinates([lastCoordinate]);
-            }}
-          />
-        ) : (
-          <View
-            style={{
-              flexDirection: newLocal,
-              justifyContent: 'center',
-              gap: 10,
-            }}>
-            <Button
-              title="add"
-              onPress={() => setCoordinates([...coordinates, lastCoordinate])}
-            />
-            <Button title="cancel" onPress={() => setStarted(false)} />
-            <Button
-              title="stop and save"
-              onPress={() => saveCoordsInLocal(coordinates[0])}
-            />
-          </View>
-        )}
-      </View>
-
       {/* // @ Map View */}
       <View style={{flex: 1}}>
         <MapView
@@ -176,29 +59,103 @@ const MapScreen: FC<ScreenParams> = props => {
             const crosshairCoords = await map.current?.getCoordinateFromView(
               crosshairPos,
             );
-            console.log(
-              'Crosshair coords: ',
-              crosshairCoords,
-              'camera center:',
-              e.properties.center,
-            );
+
             setLastCoordinate(crosshairCoords as Position);
             if (crosshairCoords && started) {
               setLastCoordinate(crosshairCoords as Position);
             }
           }}>
-          {started && <Polygon coordinates={coordinatesWithLast} />}
+          {started && (
+            <Polygon
+              coordinates={coordinatesWithLast}
+              saveCoords={(c: FeatureCollection) => setFeatureCollection(c)}
+            />
+          )}
           <Camera
             defaultSettings={{
-              centerCoordinate: [-73.970895, 40.723279],
+              centerCoordinate: [78.121719, 9.939093],
               zoomLevel: 12,
             }}
           />
         </MapView>
+
+        {/* // @ Cross hair to draw polygon */}
         <CrosshairOverlay onCenter={c => setCrosshairPos(c)} />
+      </View>
+
+      {/* // @ Buttons */}
+      <View
+        style={{
+          paddingVertical: 12,
+          backgroundColor: 'transparent',
+          position: 'absolute',
+          bottom: 0,
+          alignSelf: 'center',
+        }}>
+        {!started ? (
+          // @ Button to start drawing
+          <TouchableOpacity
+            onPress={() => {
+              setStarted(true);
+              setCoordinates([lastCoordinate]);
+            }}
+            style={styles.button}>
+            <Text style={{color: COLORS.white, fontFamily: 'JosefinSans-Bold'}}>
+              Start
+            </Text>
+            <MIcon name="fountain-pen-tip" size={18} color={COLORS.white} />
+          </TouchableOpacity>
+        ) : (
+          <View
+            style={{
+              flexDirection: newLocal,
+              justifyContent: 'center',
+              gap: 10,
+            }}>
+            {/* // @ Button to mark locations */}
+            <TouchableOpacity
+              onPress={() => setCoordinates([...coordinates, lastCoordinate])}
+              style={styles.button}>
+              <Text style={styles.btnTxt}>Mark</Text>
+              <MIcon name="plus" size={18} color={COLORS.white} />
+            </TouchableOpacity>
+            {/* // @ Button to cancel */}
+            <TouchableOpacity onPress={cancelDrawing} style={styles.button}>
+              <Text style={{color: COLORS.white, fontFamily: FONTS.bold}}>
+                Cancel
+              </Text>
+              <MIcon name="close" size={18} color={COLORS.white} />
+            </TouchableOpacity>
+            {/* // @ Button to save */}
+            <TouchableOpacity
+              onPress={() => saveCoordsInLocal()}
+              style={styles.button}>
+              <Text style={{color: COLORS.white, fontFamily: FONTS.bold}}>
+                Save & Stop
+              </Text>
+              <MIcon name="fountain-pen-tip" size={18} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  button: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    gap: 4,
+  },
+
+  btnTxt: {color: COLORS.white, fontFamily: FONTS.bold},
+});
 
 export default MapScreen;
